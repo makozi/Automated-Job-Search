@@ -1,0 +1,48 @@
+name: Daily Job Scraper
+
+on:
+  schedule:
+    - cron: "0 15 * * *"   # 4pm Africa/Lagos
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          # If using Playwright/Chromium for scraping:
+          # pip install playwright
+          # playwright install --with-deps chromium
+
+      - name: Run job search script
+        run: |
+          python job_search.py
+
+
+      - name: Upload CSV artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: job-search-results
+          path: results/job_search_results_new.csv
+          if-no-files-found: error
+
+      # OPTIONAL: commit updated CSV back to repo
+      - name: Commit and push CSV
+        if: ${{ always() }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add results/job_search_results_new.csv
+          git commit -m "Daily job_search_results_new.csv update [skip ci]" || echo "No changes"
+          git push
